@@ -34,10 +34,10 @@ class Method(Enum):
 class Endpoint(Enum):
     """ Four paths specified in JSON API """
 
-    COLLECTION = '/<api_type>/'
-    RESOURCE = '/<api_type>/<obj_id>/'
-    RELATED = '/<api_type>/<obj_id>/<relationship>/'
-    RELATIONSHIP = '/<api_type>/<obj_id>/relationships/<relationship>/'
+    COLLECTION = '/<api_type>'
+    RESOURCE = '/<api_type>/<obj_id>'
+    RELATED = '/<api_type>/<obj_id>/<relationship>'
+    RELATIONSHIP = '/<api_type>/<obj_id>/relationships/<relationship>'
 
 
 class JSONAPIEncoder(json.JSONEncoder):
