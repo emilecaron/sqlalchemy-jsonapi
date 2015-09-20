@@ -6,7 +6,7 @@ MIT License
 """
 
 from enum import Enum
-from inflection import pluralize, underscore
+from inflection import pluralize, underscore, dasherize
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.interfaces import MANYTOONE
 from sqlalchemy.util.langhelpers import iterate_attributes
@@ -198,7 +198,7 @@ class JSONAPI(object):
             if name.startswith('_'):
                 continue
 
-            prepped_name = underscore(pluralize(name))
+            prepped_name = dasherize(underscore(pluralize(name)))
             api_type = getattr(model, '__jsonapi_type__', prepped_name)
 
             model.__jsonapi_attribute_descriptors__ = {}
