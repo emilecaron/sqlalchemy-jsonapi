@@ -330,11 +330,11 @@ class JSONAPI(object):
 
                 if related is None or not perm(related):
                     if key in local_fields:
-                        to_ret['relationships'][key] = {'data': None}
+                        to_ret['relationships'][dasherize(key)] = {'data': None}
 
                 else:
                     if key in local_fields:
-                        to_ret['relationships'][key] = {
+                        to_ret['relationships'][dasherize(key)] = {
                             'data': {
                                 'id': related.id,
                                 'type': related.__jsonapi_type__
@@ -351,7 +351,7 @@ class JSONAPI(object):
 
             else:
                 if key in local_fields:
-                    to_ret['relationships'][key] = {'data': []}
+                    to_ret['relationships'][dasherize(key)] = {'data': []}
 
                 for item in related:
                     try:
@@ -360,7 +360,7 @@ class JSONAPI(object):
                         continue
 
                     if key in local_fields:
-                        to_ret['relationships'][key]['data'].append({
+                        to_ret['relationships'][dasherize(key)]['data'].append({
                             'id': item.id,
                             'type': item.__jsonapi_type__
                         })
@@ -377,7 +377,7 @@ class JSONAPI(object):
             try:
                 desc = get_attr_desc(instance, key, AttributeActions.GET)
                 if key in local_fields:
-                    to_ret['attributes'][key] = desc(instance)
+                    to_ret['attributes'][dasherize(key)] = desc(instance)
             except PermissionDeniedError:
                 continue
 
@@ -816,7 +816,7 @@ class JSONAPI(object):
         if json_data['data']['type'] != resource.__jsonapi_type__:
             raise BadRequestError('Type does not match')
 
-        data_keys = set(json_data['data']['relationships'].keys())
+        data_keys = set([underscore(key) for key in json_data['data']['relationships']])
         model_keys = set(resource.__mapper__.relationships.keys())
         if not data_keys <= model_keys:
             raise BadRequestError(
@@ -836,10 +836,10 @@ class JSONAPI(object):
                     continue
 
                 self.patch_relationship(
-                    session, json_data['data']['relationships'][key],
+                    session, json_data['data']['relationships'][dasherize(key)],
                     model.__jsonapi_type__, resource.id, key)
 
-            data_keys = set(json_data['data']['attributes'].keys())
+            data_keys = set([underscore(key) for key in json_data['data']['attributes']])
             model_keys = set(orm_desc_keys) - attrs_to_ignore
 
             if not data_keys <= model_keys:
@@ -850,7 +850,7 @@ class JSONAPI(object):
 
             for key in data_keys & model_keys:
                 setter = get_attr_desc(resource, key, AttributeActions.SET)
-                setter(resource, json_data['data']['attributes'][key])
+                setter(resource, json_data['data']['attributes'][dasherize(key)])
             session.commit()
         except IntegrityError as e:
             session.rollback()
@@ -887,7 +887,7 @@ class JSONAPI(object):
         resource = model()
         check_permission(resource, None, Permissions.CREATE)
 
-        data_keys = set(data['data'].get('relationships', {}).keys())
+        data_keys = set([underscore(key) for key in data['data'].get('relationships', {})])
         model_keys = set(resource.__mapper__.relationships.keys())
         if not data_keys <= model_keys:
             raise BadRequestError(
@@ -961,7 +961,7 @@ class JSONAPI(object):
                                              Permissions.CREATE)
                         setter(resource, to_relate)
 
-            data_keys = set(data['data'].get('attributes', {}).keys())
+            data_keys = set([underscore(key) for key in data['data'].get('attributes', {})])
             model_keys = set(orm_desc_keys) - attrs_to_ignore
 
             if not data_keys <= model_keys:
@@ -972,7 +972,7 @@ class JSONAPI(object):
 
             for key in data_keys & model_keys:
                 setter = get_attr_desc(resource, key, AttributeActions.SET)
-                setter(resource, data['data']['attributes'][key])
+                setter(resource, data['data']['attributes'][dasherize(key)])
             session.add(resource)
             session.commit()
         except IntegrityError as e:
