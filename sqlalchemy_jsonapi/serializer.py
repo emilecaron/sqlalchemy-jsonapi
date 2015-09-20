@@ -739,8 +739,9 @@ class JSONAPI(object):
                     raise ValidationError('Provided data must be a hash.')
 
                 related = getattr(resource, relationship.key)
-                check_permission(related, None, Permissions.EDIT)
-                check_permission(related, remote_side, Permissions.EDIT)
+                if related:
+                    check_permission(related, None, Permissions.EDIT)
+                    check_permission(related, remote_side, Permissions.EDIT)
 
                 setter = get_rel_desc(resource, relationship.key,
                                       RelationshipActions.SET)
@@ -818,11 +819,7 @@ class JSONAPI(object):
 
         data_keys = set([underscore(key) for key in json_data['data']['relationships']])
         model_keys = set(resource.__mapper__.relationships.keys())
-        if not data_keys <= model_keys:
-            raise BadRequestError(
-                '{} not relationships for {}.{}'.format(
-                    ', '.join(list(data_keys - model_keys)),
-                    model.__jsonapi_type__, resource.id))
+        data_keys = data_keys.intersection(model_keys)
 
         attrs_to_ignore = {'__mapper__', 'id'}
 
@@ -841,14 +838,9 @@ class JSONAPI(object):
 
             data_keys = set([underscore(key) for key in json_data['data']['attributes']])
             model_keys = set(orm_desc_keys) - attrs_to_ignore
+            data_keys = data_keys.intersection(model_keys)
 
-            if not data_keys <= model_keys:
-                raise BadRequestError(
-                    '{} not attributes for {}.{}'.format(
-                        ', '.join(list(data_keys - model_keys)),
-                        model.__jsonapi_type__, resource.id))
-
-            for key in data_keys & model_keys:
+            for key in data_keys:
                 setter = get_attr_desc(resource, key, AttributeActions.SET)
                 setter(resource, json_data['data']['attributes'][dasherize(key)])
             session.commit()
@@ -889,11 +881,7 @@ class JSONAPI(object):
 
         data_keys = set([underscore(key) for key in data['data'].get('relationships', {})])
         model_keys = set(resource.__mapper__.relationships.keys())
-        if not data_keys <= model_keys:
-            raise BadRequestError(
-                '{} not relationships for {}'.format(
-                    ', '.join(list(data_keys -
-                                   model_keys)), model.__jsonapi_type__))
+        data_keys = data_keys.intersection(model_keys)
 
         attrs_to_ignore = {'__mapper__', 'id'}
 
@@ -963,14 +951,9 @@ class JSONAPI(object):
 
             data_keys = set([underscore(key) for key in data['data'].get('attributes', {})])
             model_keys = set(orm_desc_keys) - attrs_to_ignore
+            data_keys = data_keys.intersection(model_keys)
 
-            if not data_keys <= model_keys:
-                raise BadRequestError(
-                    '{} not attributes for {}'.format(
-                        ', '.join(list(data_keys -
-                                       model_keys)), model.__jsonapi_type__))
-
-            for key in data_keys & model_keys:
+            for key in data_keys:
                 setter = get_attr_desc(resource, key, AttributeActions.SET)
                 setter(resource, data['data']['attributes'][dasherize(key)])
             session.add(resource)
