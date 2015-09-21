@@ -64,7 +64,6 @@ def attr_descriptor(action, *names):
         action = [action]
 
     def wrapped(fn):
-        print(fn)
         if not hasattr(fn, '__jsonapi_action__'):
             fn.__jsonapi_action__ = set()
             fn.__jsonapi_desc_for_attrs__ = set()
