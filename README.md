@@ -1,5 +1,12 @@
 # SQLAlchemy-JSONAPI
 
+>
+**What the fork is this?**
+
+Goal is to achieve ember-data (with JSONApi adapter) compatibility.
+Until compatibility is achieved, this is to be considered PoC code and not production intended.
+<
+
 [![Build Status](https://travis-ci.org/ColtonProvias/sqlalchemy-jsonapi.svg?branch=master)](https://travis-ci.org/ColtonProvias/sqlalchemy-jsonapi)
 
 [JSON API](http://jsonapi.org/) implementation for use with
