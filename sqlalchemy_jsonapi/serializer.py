@@ -860,7 +860,8 @@ class JSONAPI(object):
             for key, relationship in resource.__mapper__.relationships.items():
                 attrs_to_ignore |= set(relationship.local_columns) | {key}
 
-                if key not in json_data['data']['relationships'].keys():
+                if dasherize(key) not in json_data['data']['relationships'].keys():
+                    print('Skipping key', key)
                     continue
 
                 self.patch_relationship(
