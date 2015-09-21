@@ -43,6 +43,14 @@ class Permissions(Enum):
     DELETE = 103
 
 
+ALL_PERMISSIONS = {
+    Permissions.VIEW, Permissions.CREATE, Permissions.EDIT, Permissions.DELETE
+}
+INTERACTIVE_PERMISSIONS = {
+    Permissions.CREATE, Permissions.EDIT, Permissions.DELETE
+}
+
+
 def attr_descriptor(action, *names):
     """
     Wrap a function that allows for getting or setting of an attribute.  This
@@ -52,10 +60,16 @@ def attr_descriptor(action, *names):
     :param action: The AttributeActions that this descriptor performs
     :param names: A list of names of the attributes this references
     """
+    if isinstance(action, AttributeActions):
+        action = [action]
 
     def wrapped(fn):
-        fn.__jsonapi_desc_for_attrs__ = names
-        fn.__jsonapi_action__ = action
+        print(fn)
+        if not hasattr(fn, '__jsonapi_action__'):
+            fn.__jsonapi_action__ = set()
+            fn.__jsonapi_desc_for_attrs__ = set()
+        fn.__jsonapi_desc_for_attrs__ |= set(names)
+        fn.__jsonapi_action__ |= set(action)
         return fn
 
     return wrapped
@@ -69,10 +83,15 @@ def relationship_descriptor(action, *names):
     :param action: The RelationshipActions that this descriptor performs
     :param names: A list of names of the relationships this references
     """
+    if isinstance(action, RelationshipActions):
+        action = [action]
 
     def wrapped(fn):
-        fn.__jsonapi_desc_for_rels__ = names
-        fn.__jsonapi_action__ = action
+        if not hasattr(fn, '__jsonapi_action__'):
+            fn.__jsonapi_action__ = set()
+            fn.__jsonapi_desc_for_rels__ = set()
+        fn.__jsonapi_desc_for_rels__ |= set(names)
+        fn.__jsonapi_action__ |= set(action)
         return fn
 
     return wrapped
@@ -89,7 +108,10 @@ class PermissionTest(object):
         :param permission: The permission to check for
         :param names: The names to test for.  None represents the model.
         """
-        self.permission = permission
+        if isinstance(permission, Permissions):
+            self.permission = [permission]
+        else:
+            self.permission = permission
         self.names = names if len(names) > 0 else [None]
 
     def __call__(self, fn):
@@ -98,8 +120,11 @@ class PermissionTest(object):
 
         :param fn: Function to decorate
         """
-        fn.__jsonapi_chk_perm_for__ = self.names
-        fn.__jsonapi_check_permission__ = self.permission
+        if not hasattr(fn, '__jsonapi_chk_perm_for__'):
+            fn.__jsonapi_check_permission__ = set()
+            fn.__jsonapi_chk_perm_for__ = set()
+        fn.__jsonapi_chk_perm_for__ |= set(self.names)
+        fn.__jsonapi_check_permission__ |= set(self.permission)
         return fn
 
 #: More consistent name for the decorators
@@ -114,7 +139,7 @@ class JSONAPIResponse(object):
         self.status_code = 200
         self.data = {
             'jsonapi': {'version': '1.0'},
-            'meta': {'sqlalchemy_jsonapi_version': '2.1.2'}
+            'meta': {'sqlalchemy_jsonapi_version': '3.0.0'}
         }
 
 
@@ -198,8 +223,9 @@ class JSONAPI(object):
             if name.startswith('_'):
                 continue
 
+            prepped_name = underscore(pluralize(name))
             prepped_name = dasherize(underscore(pluralize(name)))
-            api_type = getattr(model, '__jsonapi_type__', prepped_name)
+            api_type = getattr(model, '__jsonapi_type_override__', prepped_name)
 
             model.__jsonapi_attribute_descriptors__ = {}
             model.__jsonapi_rel_desc__ = {}
@@ -213,7 +239,8 @@ class JSONAPI(object):
                     for attribute in prop_value.__jsonapi_desc_for_attrs__:
                         descriptors.setdefault(attribute, defaults)
                         attr_desc = descriptors[attribute]
-                        attr_desc[prop_value.__jsonapi_action__] = prop_value
+                        for action in prop_value.__jsonapi_action__:
+                            attr_desc[action] = prop_value
 
                 if hasattr(prop_value, '__jsonapi_desc_for_rels__'):
                     defaults = {
@@ -226,7 +253,8 @@ class JSONAPI(object):
                     for relationship in prop_value.__jsonapi_desc_for_rels__:
                         rels_desc.setdefault(attribute, defaults)
                         rel_desc = rels_desc[relationship]
-                        rel_desc[prop_value.__jsonapi_action__] = prop_value
+                        for action in prop_value.__jsonapi_action__:
+                            rel_desc[action] = prop_value
 
                 if hasattr(prop_value, '__jsonapi_check_permission__'):
                     defaults = {
@@ -241,15 +269,15 @@ class JSONAPI(object):
                     for check_for in prop_value.__jsonapi_chk_perm_for__:
                         perm_obj.setdefault(check_for, defaults)
                         perm_idv = perm_obj[check_for]
-                        check_perm = prop_value.__jsonapi_check_permission__
-                        perm_idv[check_perm] = prop_value
+                        check_perms = prop_value.__jsonapi_check_permission__
+                        for check_perm in check_perms:
+                            perm_idv[check_perm] = prop_value
             self.models[model.__jsonapi_type__] = model
 
     def _fetch_model(self, api_type):
         if api_type not in self.models.keys():
             raise ResourceTypeNotFoundError(api_type)
         return self.models[api_type]
-
 
     def _get_relationship(self, resource, rel_key, permission):
         if rel_key not in resource.__mapper__.relationships.keys():
@@ -316,7 +344,8 @@ class JSONAPI(object):
         local_fields = fields.get(api_type, orm_desc_keys)
 
         for key, relationship in instance.__mapper__.relationships.items():
-            attrs_to_ignore |= set(relationship.local_columns) | {key}
+            attrs_to_ignore |= set([c.name for c in relationship.local_columns
+                                    ]) | {key}
 
             try:
                 desc = get_rel_desc(instance, key, RelationshipActions.GET)
@@ -790,7 +819,7 @@ class JSONAPI(object):
             raise ValidationError('Incompatible Type')
 
         return self.get_relationship(session, {}, model.__jsonapi_type__,
-            resource.id, relationship.key)
+                                     resource.id, relationship.key)
 
     def patch_resource(self, session, json_data, api_type, obj_id):
         """
@@ -816,6 +845,9 @@ class JSONAPI(object):
 
         if json_data['data']['type'] != resource.__jsonapi_type__:
             raise BadRequestError('Type does not match')
+
+        json_data['data'].setdefault('relationships', {})
+        json_data['data'].setdefault('attributes', {})
 
         data_keys = set([underscore(key) for key in json_data['data']['relationships']])
         model_keys = set(resource.__mapper__.relationships.keys())
@@ -879,11 +911,16 @@ class JSONAPI(object):
         resource = model()
         check_permission(resource, None, Permissions.CREATE)
 
+        data['data'].setdefault('relationships', {})
+        data['data'].setdefault('attributes', {})
+
         data_keys = set([underscore(key) for key in data['data'].get('relationships', {})])
         model_keys = set(resource.__mapper__.relationships.keys())
         data_keys = data_keys.intersection(model_keys)
 
         attrs_to_ignore = {'__mapper__', 'id'}
+
+        setters = []
 
         try:
             if 'id' in data['data'].keys():
@@ -903,12 +940,11 @@ class JSONAPI(object):
                 data_rel = data_rel['data']
 
                 remote_side = relationship.back_populates
-
                 if relationship.direction == MANYTOONE:
                     setter = get_rel_desc(resource, key,
                                           RelationshipActions.SET)
                     if data_rel is None:
-                        setter(resource, None)
+                        setters.append([setter, None])
                     else:
                         if not isinstance(data_rel, dict):
                             raise BadRequestError(
@@ -926,7 +962,7 @@ class JSONAPI(object):
                         else:
                             check_permission(to_relate, remote_side,
                                              Permissions.CREATE)
-                        setter(resource, to_relate)
+                        setters.append([setter, to_relate])
                 else:
                     setter = get_rel_desc(resource, key,
                                           RelationshipActions.APPEND)
@@ -947,7 +983,7 @@ class JSONAPI(object):
                         else:
                             check_permission(to_relate, remote_side,
                                              Permissions.CREATE)
-                        setter(resource, to_relate)
+                        setters.append([setter, to_relate])
 
             data_keys = set([underscore(key) for key in data['data'].get('attributes', {})])
             model_keys = set(orm_desc_keys) - attrs_to_ignore

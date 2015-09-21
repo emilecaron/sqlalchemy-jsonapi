@@ -100,6 +100,9 @@ class FlaskJSONAPI(object):
     #: (sender, method, endpoint, data, req_args, error)
     on_error = signal('jsonapi-on-error')
 
+    #: JSON Encoder to use
+    json_encoder = JSONAPIEncoder
+
     def __init__(self,
                  app=None,
                  sqla=None,
@@ -143,6 +146,7 @@ class FlaskJSONAPI(object):
         :param methods: Methods to wrap handlers for
         :param endpoints: Endpoints to wrap handlers for
         """
+
         def wrapper(fn):
             @wraps(fn)
             def wrapped(*args, **kwargs):
@@ -155,14 +159,23 @@ class FlaskJSONAPI(object):
                         self._handler_chains.setdefault(key, [])
                         self._handler_chains[key].append(wrapped)
             return wrapped
+
         return wrapper
 
     def _call_next(self, handler_chain):
+        """
+        Generates an express-like chain for handling requests.
+
+        :param handler_chain: The current chain of handlers
+        """
+
         def wrapped(*args, **kwargs):
             if len(handler_chain) == 1:
                 return handler_chain[0](*args, **kwargs)
             else:
-                return handler_chain[0](self._call_next(handler_chain[1:]), *args, **kwargs)
+                return handler_chain[0](self._call_next(handler_chain[1:]),
+                                        *args, **kwargs)
+
         return wrapped
 
     def _setup_adapter(self, namespace, route_prefix):
@@ -178,6 +191,11 @@ class FlaskJSONAPI(object):
             pattern = route_prefix + endpoint.value
             name = '{}_{}_{}'.format(namespace, method.name, endpoint.name)
             view = self._generate_view(method, endpoint)
+            self.app.add_url_rule(pattern + '/',
+                                  name + '_slashed',
+                                  view,
+                                  methods=[method.name],
+                                  strict_slashes=False)
             self.app.add_url_rule(pattern, name, view, methods=[method.name])
 
     def _generate_view(self, method, endpoint):
@@ -224,9 +242,8 @@ class FlaskJSONAPI(object):
             try:
                 attr = '{}_{}'.format(method.name, endpoint.name).lower()
                 handler = getattr(self.serializer, attr)
-                handler_chain = list(self._handler_chains.get((kwargs['api_type'],
-                                                               method,
-                                                               endpoint), []))
+                handler_chain = list(self._handler_chains.get((
+                    kwargs['api_type'], method, endpoint), []))
                 handler_chain.append(handler)
                 chained_handler = self._call_next(handler_chain)
                 response = chained_handler(*args)
@@ -238,9 +255,9 @@ class FlaskJSONAPI(object):
                 self.sqla.session.rollback()
                 results = self.on_error.send(self, error=exc, **event_kwargs)
                 response = override(exc, results)
-            rendered_response = make_response()
+            rendered_response = make_response('')
             if response.status_code != 204:
-                data = json.dumps(response.data, cls=JSONAPIEncoder)
+                data = json.dumps(response.data, cls=self.json_encoder)
                 rendered_response = make_response(data)
             rendered_response.status_code = response.status_code
             rendered_response.content_type = 'application/vnd.api+json'

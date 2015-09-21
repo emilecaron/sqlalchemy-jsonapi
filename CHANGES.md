@@ -1,5 +1,68 @@
 # SQLAlchemy-JSONAPI Changelog
 
+## 3.0.0
+
+*2015-09-20*
+
+* BREAKING: Implements #8 where `__jsonapi_type__` is replaced with `__jsonapi_type_override__`.  This can break previous configurations where `__jsonapi_type__` was used to override the generated type.  To fix breaks, just change it to `__jsonapi_type_override__` and it should work better.  Thank you, @angelosarto for your contribution on this.
+
+## 2.1.11
+
+*2015-09-20*
+
+* Fixed issue where not providing a relationships key would cause a POST or PATCH request to fail
+
+## 2.1.10
+
+*2015-09-20*
+
+* Fixes compatibility with Sentry when running unit tests.  204 errors still need content.
+
+## 2.1.9
+
+*2015-09-20*
+
+* Fixed issue where incomplete models get committed to multiple relationships before they earn redeeming attributes
+
+## 2.1.8
+
+*2015-09-19*
+
+* Fixed issue where local columns for relationships were still appearing in responses
+
+## 2.1.7
+
+*2015-09-19*
+
+* Fixed reference before assignment error
+
+I apologize for rapid fire updates, but this is being developed alongside another project so it's trying to keep up with the main project.
+
+## 2.1.6
+
+*2015-09-19*
+
+* Fixed error when TypeError is raised in descriptors
+
+## 2.1.5
+
+*2015-09-19*
+
+* Permissions and actions can now be provided as sets.
+* Fixed problem where users think libraries don't update often enough by pushing out 4th update on a single date
+
+## 2.1.4
+
+*2015-09-19*
+
+* JSONAPIEncoder is now replaceable in the flask extension
+
+## 2.1.3
+
+*2015-09-19*
+
+* Trailing slashes are now optional.  Idea based on change by @emilecaron.
+
 ## 2.1.2
 
 *2015-09-19*
