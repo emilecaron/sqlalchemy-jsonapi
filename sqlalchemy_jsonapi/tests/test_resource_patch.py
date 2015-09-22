@@ -91,7 +91,7 @@ def test_400_field_not_found(client, post, user):
     client.patch('/api/posts/{}/'.format(post.id),
                  data=json.dumps(payload),
                  content_type='application/vnd.api+json').validate(
-                     400, BadRequestError)
+                     200)
 
 
 def test_409_type_mismatch_to_one(client, post, user):

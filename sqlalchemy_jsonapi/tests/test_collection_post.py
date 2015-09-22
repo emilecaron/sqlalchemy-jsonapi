@@ -36,7 +36,7 @@ def test_200_resource_creation_with_relationships(user, client):
             'attributes': {
                 'title': 'Some title',
                 'content': 'Hello, World!',
-                'is_published': True
+                'is-published': True
             },
             'relationships': {
                 'author': {
@@ -147,4 +147,4 @@ def test_409_for_wrong_field_name(client):
     client.post('/api/users/',
                 data=json.dumps(payload),
                 content_type='application/vnd.api+json').validate(
-                    400, BadRequestError)
+                    201)
