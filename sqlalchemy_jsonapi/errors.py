@@ -76,7 +76,7 @@ class MissingTypeError(BaseError):
 
 class MissingContentTypeError(BaseError):
     status_code = 409
-    code = 'invalid_conent_type'
+    code = 'invalid_content_type'
     title = 'Missing/Invalid Content-Type Header'
     detail = 'Content-Type must be application/vnd.api+json'
 
