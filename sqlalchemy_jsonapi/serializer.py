@@ -929,10 +929,10 @@ class JSONAPI(object):
                 attrs_to_ignore |= set(relationship.local_columns) | {key}
 
                 if 'relationships' not in data['data'].keys()\
-                        or key not in data['data']['relationships'].keys():
+                        or dasherize(key) not in data['data']['relationships'].keys():
                     continue
 
-                data_rel = data['data']['relationships'][key]
+                data_rel = data['data']['relationships'][dasherize(key)]
                 if 'data' not in data_rel.keys():
                     raise BadRequestError(
                         'Missing data key in relationship {}'.format(key))
@@ -987,6 +987,9 @@ class JSONAPI(object):
             data_keys = set([underscore(key) for key in data['data'].get('attributes', {})])
             model_keys = set(orm_desc_keys) - attrs_to_ignore
             data_keys = data_keys.intersection(model_keys)
+
+            for setter, value in setters:
+                setter(resource, value)
 
             for key in data_keys:
                 setter = get_attr_desc(resource, key, AttributeActions.SET)
