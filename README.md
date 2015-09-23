@@ -1,7 +1,7 @@
-# SQLAlchemy-JSONAPI
+# SQLAlchemy-JSONAPI: *Ember-data compat*
 Forked from https://github.com/ColtonProvias/sqlalchemy-jsonapi
 
-The goal of this fork is to achieve Ember-data compatibility, using the new default JSONApi adapter.
+The goal of this fork is to achieve [Ember-data](https://github.com/emberjs/data) compatibility, using the new default JSONApi adapter.
 This requires many small tweaks, mostly around the serializer.
 
 ### Build status
