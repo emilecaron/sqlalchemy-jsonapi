@@ -1,24 +1,12 @@
-# SQLAlchemy-JSONAPI
+# SQLAlchemy-JSONAPI: *Ember-data compat*
+Forked from https://github.com/ColtonProvias/sqlalchemy-jsonapi
 
+The goal of this fork is to achieve [Ember-data](https://github.com/emberjs/data) compatibility, using the new default JSONApi adapter.
+This requires many small tweaks, mostly around the serializer.
 
-**What the fork is this?**
-
-Goal is to achieve ember-data (with JSONApi adapter) compatibility.
-Until compatibility is achieved, this is to be considered PoC code and not production intended.
-
-
+### Build status
 [![Build Status](https://travis-ci.org/emilecaron/sqlalchemy-jsonapi.svg?branch=master)](https://travis-ci.org/emilecaron/sqlalchemy-jsonapi)
 
-[JSON API](http://jsonapi.org/) implementation for use with
-[SQLAlchemy](http://www.sqlalchemy.org/).
-
-SQLAlchemy-JSONAPI aims to implement the JSON API spec and to make it as simple
-to use and implement as possible.
-
-* [Documentation](http://sqlalchemy-jsonapi.readthedocs.org)
-
-# Installation
-
-```shell
-pip install sqlalchemy-jsonapi
-```
+### Key changes:
+* Expect and send dash case in data, while models fields are still declared using underscore case
+* Tolerance for data fields missing in the model: skip it instead of raising an error
