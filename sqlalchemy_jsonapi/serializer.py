@@ -7,7 +7,7 @@ MIT License
 
 from enum import Enum
 from inflection import pluralize, underscore, dasherize
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DataError
 from sqlalchemy.orm.interfaces import MANYTOONE
 from sqlalchemy.util.langhelpers import iterate_attributes
 
@@ -307,7 +307,10 @@ class JSONAPI(object):
         """
         if api_type not in self.models.keys():
             raise ResourceTypeNotFoundError(api_type)
-        obj = session.query(self.models[api_type]).get(obj_id)
+        try:
+            obj = session.query(self.models[api_type]).get(obj_id)
+        except DataError:
+            raise ResourceNotFoundError(self.models[api_type], obj_id)
         if obj is None:
             raise ResourceNotFoundError(self.models[api_type], obj_id)
         check_permission(obj, None, permission)
