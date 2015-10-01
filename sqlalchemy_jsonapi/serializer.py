@@ -573,7 +573,11 @@ class JSONAPI(object):
         self._check_instance_relationships_for_delete(resource)
 
         session.delete(resource)
-        session.commit()
+        try:
+            session.commit()
+        except IntegrityError as e:
+            session.rollback()
+            raise ValidationError(str(e.orig))
 
         response = JSONAPIResponse()
         response.status_code = 204
