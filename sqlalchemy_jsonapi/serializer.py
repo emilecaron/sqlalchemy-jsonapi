@@ -995,12 +995,14 @@ class JSONAPI(object):
             model_keys = set(orm_desc_keys) - attrs_to_ignore
             data_keys = data_keys.intersection(model_keys)
 
-            for setter, value in setters:
-                setter(resource, value)
+            with session.no_autoflush:
+                for setter, value in setters:
+                    setter(resource, value)
 
-            for key in data_keys:
-                setter = get_attr_desc(resource, key, AttributeActions.SET)
-                setter(resource, data['data']['attributes'][dasherize(key)])
+                for key in data_keys:
+                    setter = get_attr_desc(resource, key, AttributeActions.SET)
+                    setter(resource, data['data']['attributes'][dasherize(key)])
+
             session.add(resource)
             session.commit()
         except IntegrityError as e:
