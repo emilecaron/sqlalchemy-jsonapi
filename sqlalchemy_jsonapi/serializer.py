@@ -774,20 +774,23 @@ class JSONAPI(object):
                     raise ValidationError('Provided data must be a hash.')
 
                 related = getattr(resource, relationship.key)
-                if related:
-                    check_permission(related, None, Permissions.EDIT)
-                    check_permission(related, remote_side, Permissions.EDIT)
-
                 setter = get_rel_desc(resource, relationship.key,
                                       RelationshipActions.SET)
 
                 if json_data['data'] == None:
+                    if related:
+                        check_permission(related, None, Permissions.EDIT)
+                        check_permission(related, remote_side, Permissions.EDIT)
                     setter(resource, None)
                 else:
                     to_relate = self._fetch_resource(
                         session, json_data['data']['type'],
-                        json_data['data']['id'], Permissions.EDIT)
-                    check_permission(to_relate, remote_side, Permissions.EDIT)
+                        json_data['data']['id'], Permissions.VIEW)
+                    if to_relate != related:
+                        check_permission(to_relate, remote_side, Permissions.EDIT)
+                        if related:
+                            check_permission(related, None, Permissions.EDIT)
+                            check_permission(related, remote_side, Permissions.EDIT)
                     setter(resource, to_relate)
             else:
                 if not isinstance(json_data['data'], list):
