@@ -778,7 +778,7 @@ class JSONAPI(object):
                                       RelationshipActions.SET)
 
                 if json_data['data'] == None:
-                    if related:
+                    if related and not getattr(related, '__jsonapi_editable_remote_hasmany__', False):
                         check_permission(related, None, Permissions.EDIT)
                         check_permission(related, remote_side, Permissions.EDIT)
                     setter(resource, None)
@@ -788,7 +788,7 @@ class JSONAPI(object):
                         json_data['data']['id'], Permissions.VIEW)
                     if to_relate != related:
                         check_permission(to_relate, remote_side, Permissions.EDIT)
-                        if related:
+                        if related and not getattr(related, '__jsonapi_editable_remote_hasmany__', False):
                             check_permission(related, None, Permissions.EDIT)
                             check_permission(related, remote_side, Permissions.EDIT)
                     setter(resource, to_relate)
