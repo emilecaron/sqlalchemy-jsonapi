@@ -803,31 +803,33 @@ class JSONAPI(object):
                 appender = get_rel_desc(resource, relationship.key,
                                         RelationshipActions.APPEND)
 
-                for item in related:
-                    remote = item.__mapper__.relationships[remote_side]
+                to_relate = [
+                    self._fetch_resource(session, item['type'], item['id'], Permissions.VIEW)
+                    for item in json_data['data']
+                ]
 
-                    if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
-                        check_permission(item, None, Permissions.EDIT)
-                        if remote.direction == MANYTOONE:
-                            check_permission(item, remote_side, Permissions.EDIT)
-                        else:
-                            check_permission(item, remote_side, Permissions.DELETE)
+                if related != to_relate:
+                    for item in related:
+                        remote = item.__mapper__.relationships[remote_side]
 
-                    remover(resource, item)
+                        if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
+                            check_permission(item, None, Permissions.EDIT)
+                            if remote.direction == MANYTOONE:
+                                check_permission(item, remote_side, Permissions.EDIT)
+                            else:
+                                check_permission(item, remote_side, Permissions.DELETE)
 
-                for item in json_data['data']:
-                    to_relate = self._fetch_resource(
-                        session, item['type'], item['id'], Permissions.VIEW)
-                    remote = to_relate.__mapper__.relationships[remote_side]
+                        remover(resource, item)
 
-                    if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
-                        if remote.direction == MANYTOONE:
-                            check_permission(to_relate, remote_side,
-                                             Permissions.EDIT)
-                        else:
-                            check_permission(to_relate, remote_side,
-                                             Permissions.CREATE)
-                    appender(resource, to_relate)
+                    for item in to_relate:
+                        remote = item.__mapper__.relationships[remote_side]
+
+                        if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
+                            if remote.direction == MANYTOONE:
+                                check_permission(item, remote_side, Permissions.EDIT)
+                            else:
+                                check_permission(item, remote_side, Permissions.CREATE)
+                        appender(resource, item)
             session.commit()
         except KeyError:
             raise ValidationError('Incompatible Type')
