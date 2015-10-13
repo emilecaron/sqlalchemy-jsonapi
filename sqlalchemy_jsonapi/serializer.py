@@ -808,28 +808,29 @@ class JSONAPI(object):
                     for item in json_data['data']
                 ]
 
-                if related != to_relate:
-                    for item in related:
-                        remote = item.__mapper__.relationships[remote_side]
+                for item in related:
+                    remote = item.__mapper__.relationships[remote_side]
 
-                        if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
+                    if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
+                        if item not in to_relate:
                             check_permission(item, None, Permissions.EDIT)
                             if remote.direction == MANYTOONE:
                                 check_permission(item, remote_side, Permissions.EDIT)
                             else:
                                 check_permission(item, remote_side, Permissions.DELETE)
+                    remover(resource, item)
 
-                        remover(resource, item)
+                for item in to_relate:
+                    remote = item.__mapper__.relationships[remote_side]
 
-                    for item in to_relate:
-                        remote = item.__mapper__.relationships[remote_side]
-
-                        if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
+                    if not getattr(item, '__jsonapi_editable_remote_hasmany__', False):
+                        if item not in related:
                             if remote.direction == MANYTOONE:
                                 check_permission(item, remote_side, Permissions.EDIT)
                             else:
                                 check_permission(item, remote_side, Permissions.CREATE)
-                        appender(resource, item)
+                    appender(resource, item)
+
             session.commit()
         except KeyError:
             raise ValidationError('Incompatible Type')
