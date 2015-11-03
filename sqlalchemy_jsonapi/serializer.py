@@ -603,7 +603,7 @@ class JSONAPI(object):
         collection = session.query(model)
 
         if id_filter:
-            ids = (int(id_) for id_ in id_filter.split(','))
+            ids = id_filter.split(',')
             collection = collection.filter(model.id.in_(ids))
 
         for attr in sorts:
