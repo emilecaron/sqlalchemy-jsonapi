@@ -8,6 +8,18 @@ def test_200_with_no_querystring(bunch_of_posts, client):
     assert response.json_data['data'][0]['id']
 
 
+def test_200_with_filter_id(bunch_of_posts, client):
+    response = client.get('/api/posts').validate(200)
+    assert len(response.json_data['data']) > 5
+
+    ids = [doc['id'] for doc in response.json_data['data'][:5]]
+    response = client.get('/api/posts?filter[id]=' + ','.join(ids)).validate(200)
+    assert len(response.json_data['data']) == 5
+
+    response = client.get('/api/posts?filter[id]=' + str(ids[0])).validate(200)
+    assert len(response.json_data['data']) == 1
+
+
 def test_200_with_single_included_model(bunch_of_posts, client):
     response = client.get('/api/posts/?include=author').validate(200)
     assert response.json_data['data'][0]['type'] == 'posts'

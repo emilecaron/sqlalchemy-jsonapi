@@ -598,8 +598,13 @@ class JSONAPI(object):
         included = {}
         sorts = query.get('sort', '').split(',')
         order_by = []
+        id_filter = query.get('filter[id]', '')
 
         collection = session.query(model)
+
+        if id_filter:
+            ids = (int(id_) for id_ in id_filter.split(','))
+            collection = collection.filter(model.id.in_(ids))
 
         for attr in sorts:
             if attr == '':
